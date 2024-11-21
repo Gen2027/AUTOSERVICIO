@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos para el Chef</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+            color: #343a40;
+        }
+
+        .orders-section {
+            width: 80%;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .order-item {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .order-item button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        .order-item button:hover {
+            background-color: #0056b3;
+        }
+
+        .order-item.completed {
+            background-color: #28a745;
+        }
+
+        .order-item.processing {
+            background-color: #ffc107;
+        }
+
+        .order-item button.disabled {
+            background-color: #d6d6d6;
+            cursor: not-allowed;
+        }
+
+        .order-item p {
+            margin: 5px 0;
+            color: #495057;
+        }
+
+        .order-item .total {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pedidos para el Chef</h1>
+    <div class="orders-section" id="ordersContainer">
+        <!-- Los pedidos aparecerán aquí -->
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getDatabase, ref, onValue, update, set, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCME1t3LkiDQH8ewWwSea1E9vBz6hMW1Kw",
+            authDomain: "autoservicio-b5783.firebaseapp.com",
+            databaseURL: "https://autoservicio-b5783-default-rtdb.firebaseio.com",
+            projectId: "autoservicio-b5783",
+            storageBucket: "autoservicio-b5783.firebasestorage.app",
+            messagingSenderId: "440481269761",
+            appId: "1:440481269761:web:786c648c150933e7ab1800",
+            measurementId: "G-XW18WEV9VX"
+        };
+
+        // Inicializa Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Referencia a los pedidos en Firebase
+        const ordersRef = ref(db, 'orders');
+
+        // Aquí se simula el ID del chef que está logueado
+        const currentChefId = "chef123";  // Esto debería ser dinámico según el chef logueado
+
+        // Contenedor de pedidos en la página del chef
+        const ordersContainer = document.getElementById('ordersContainer');
+
+        // Función para mostrar los pedidos
+        function displayOrders(orders) {
+            ordersContainer.innerHTML = '';
+
+            orders.forEach(order => {
+                const orderDiv = document.createElement('div');
+                orderDiv.classList.add('order-item');
+                
+                // Cambiar el fondo según el estado del pedido
+                if (order.status === 'Completado') {
+                    orderDiv.classList.add('completed');
+                } else if (order.status === 'En Proceso') {
+                    orderDiv.classList.add('processing');
+                }
+
+                let itemsList = '';
+                order.items.forEach(item => {
+                    itemsList += `<p><strong>${item.product} x${item.quantity}</strong></p>`;
+                });
+
+                orderDiv.innerHTML = `
+                    <p><strong>Cliente:</strong> ${order.clientName}</p>
+                    <p><strong>Detalles:</strong> ${order.details}</p>
+                    ${itemsList}
+                    <p class="total"><strong>Total:</strong> CLP $${parseFloat(order.total).toLocaleString('es-CL')}</p>
+                    <button data-action="process" data-order-id="${order.id}" ${order.status === 'En Proceso' ? 'disabled' : ''}>Marcar como En Proceso</button>
+                    <button data-action="complete" data-order-id="${order.id}" ${order.status === 'Completado' || order.chefId !== currentChefId ? 'disabled' : ''}>Marcar como Completado</button>
+                `;
+
+                // Agregar el pedido al contenedor
+                ordersContainer.appendChild(orderDiv);
+            });
+        }
+
+        // Delegación de eventos para manejar los clics en los botones
+        ordersContainer.addEventListener('click', function(event) {
+            const button = event.target;
+            const action = button.getAttribute('data-action');
+            const orderId = button.getAttribute('data-order-id');
+
+            if (action === 'process') {
+                markAsInProcess(orderId);
+            } else if (action === 'complete') {
+                markAsComplete(orderId);
+            }
+        });
+
+        // Función para mover el pedido a "En Proceso"
+        function markAsInProcess(orderId) {
+            const orderRef = ref(db, 'orders/' + orderId);
+
+            // Actualizar el estado del pedido a "En Proceso"
+            update(orderRef, { status: 'En Proceso', chefId: currentChefId })
+                .then(() => {
+                    alert('Pedido marcado como En Proceso');
+                })
+                .catch(error => {
+                    alert('Error al actualizar el estado del pedido: ' + error.message);
+                });
+        }
+
+        // Función para mover el pedido a "Completado"
+        function markAsComplete(orderId) {
+            const orderRef = ref(db, 'orders/' + orderId);
+            const completedOrderRef = ref(db, 'completedOrders/' + orderId);
+
+            // Obtener los datos del pedido
+            onValue(orderRef, (snapshot) => {
+                const orderData = snapshot.val();
+
+                if (orderData) {
+                    // Verificar si el chef que lo está marcando como completado es el que lo marcó como "En Proceso"
+                    if (orderData.chefId === currentChefId) {
+                        // Guardar el pedido en "completedOrders"
+                        set(completedOrderRef, {
+                            clientName: orderData.clientName,
+                            details: orderData.details,
+                            total: orderData.total,
+                            items: orderData.items,
+                            status: 'Completado',
+                            chefId: currentChefId // Guardar el chef que completó el pedido
+                        }).then(() => {
+                            // Eliminar el pedido de "orders"
+                            remove(orderRef);
+                            alert('Pedido marcado como completado');
+                        }).catch(error => {
+                            alert('Error al mover el pedido: ' + error.message);
+                        });
+                    } else {
+                        alert('Solo el chef que marcó el pedido como "En Proceso" puede completarlo.');
+                    }
+                }
+            });
+        }
+
+        // Escuchar los cambios en los pedidos en tiempo real
+        onValue(ordersRef, (snapshot) => {
+            const orders = [];
+            snapshot.forEach(childSnapshot => {
+                const orderData = childSnapshot.val();
+                orders.push({ id: childSnapshot.key, ...orderData });
+            });
+
+            displayOrders(orders);
+        });
+    </script>
+</body>
+</html>

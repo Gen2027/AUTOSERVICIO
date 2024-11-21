@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Pedido</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .form-container {
+            width: 80%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .form-container input[type="text"],
+        .form-container input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .form-container button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .form-container button:hover {
+            background-color: #0056b3;
+        }
+
+        .menu {
+            margin-top: 20px;
+        }
+
+        .menu-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-item input {
+            width: 60px;
+            margin-left: 10px;
+        }
+
+        .total {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Formulario de Pedido</h1>
+
+    <div class="form-container">
+        <form id="orderForm">
+            <label for="clientName">Nombre del Cliente:</label>
+            <input type="text" id="clientName" required>
+
+            <label for="details">Detalles:</label>
+            <input type="text" id="details">
+
+            <!-- Menú de productos -->
+            <div class="menu" id="menu">
+                <div class="menu-item">
+                    <span>Producto A - $1000</span>
+                    <input type="number" class="quantity" id="quantityA" value="0" min="0">
+                </div>
+                <div class="menu-item">
+                    <span>Producto B - $2000</span>
+                    <input type="number" class="quantity" id="quantityB" value="0" min="0">
+                </div>
+                <div class="menu-item">
+                    <span>Producto C - $3000</span>
+                    <input type="number" class="quantity" id="quantityC" value="0" min="0">
+                </div>
+            </div>
+
+            <div class="total">
+                <label for="total">Total: CLP $</label>
+                <input type="number" id="total" value="0" readonly>
+            </div>
+
+            <button type="submit">Enviar Pedido</button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCME1t3LkiDQH8ewWwSea1E9vBz6hMW1Kw",
+            authDomain: "autoservicio-b5783.firebaseapp.com",
+            databaseURL: "https://autoservicio-b5783-default-rtdb.firebaseio.com",
+            projectId: "autoservicio-b5783",
+            storageBucket: "autoservicio-b5783.firebasestorage.app",
+            messagingSenderId: "440481269761",
+            appId: "1:440481269761:web:786c648c150933e7ab1800",
+            measurementId: "G-XW18WEV9VX"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Precios de los productos
+        const productPrices = {
+            "Producto A": 1000,
+            "Producto B": 2000,
+            "Producto C": 3000
+        };
+
+        // Función para actualizar el total
+        function updateTotal() {
+            let total = 0;
+
+            // Obtener cantidades y calcular el total
+            const quantityA = document.getElementById('quantityA').value;
+            const quantityB = document.getElementById('quantityB').value;
+            const quantityC = document.getElementById('quantityC').value;
+
+            // Sumar al total según la cantidad de cada producto
+            total += productPrices["Producto A"] * quantityA;
+            total += productPrices["Producto B"] * quantityB;
+            total += productPrices["Producto C"] * quantityC;
+
+            // Actualizar el valor del total
+            document.getElementById('total').value = total;
+        }
+
+        // Detectar cambios en las cantidades y actualizar el total
+        document.querySelectorAll('.quantity').forEach(input => {
+            input.addEventListener('input', updateTotal);
+        });
+
+        // Enviar el pedido a Firebase
+        document.getElementById('orderForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const clientName = document.getElementById('clientName').value;
+            const details = document.getElementById('details').value;
+            const total = document.getElementById('total').value;
+
+            // Obtener las cantidades de los productos
+            const quantityA = document.getElementById('quantityA').value;
+            const quantityB = document.getElementById('quantityB').value;
+            const quantityC = document.getElementById('quantityC').value;
+
+            // Crear el objeto del pedido
+            const order = {
+                clientName: clientName,
+                details: details,
+                total: total,
+                status: 'Pendiente',
+                timestamp: new Date().toISOString(),
+                items: []
+            };
+
+            // Solo agregar los productos cuya cantidad sea mayor que 0
+            if (quantityA > 0) {
+                order.items.push({ product: "Producto A", quantity: quantityA });
+            }
+            if (quantityB > 0) {
+                order.items.push({ product: "Producto B", quantity: quantityB });
+            }
+            if (quantityC > 0) {
+                order.items.push({ product: "Producto C", quantity: quantityC });
+            }
+
+            // Si no se seleccionó ningún producto, mostrar alerta
+            if (order.items.length === 0) {
+                alert("Por favor, selecciona al menos un producto.");
+                return;
+            }
+
+            // Referencia a Firebase
+            const ordersRef = ref(db, 'orders');
+            const newOrderRef = push(ordersRef);
+            set(newOrderRef, order)
+                .then(() => {
+                    alert("Pedido enviado exitosamente");
+                    document.getElementById('orderForm').reset();
+                    document.getElementById('total').value = "0"; // Resetear el total
+                })
+                .catch(error => {
+                    alert("Error al enviar el pedido: " + error.message);
+                });
+        });
+    </script>
+</body>
+</html>

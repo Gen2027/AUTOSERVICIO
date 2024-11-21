@@ -1,0 +1,74 @@
+/* Estilo de la tarjeta personalizada */
+.card {
+    width: 300px;
+    height: 400px;
+    perspective: 1000px;
+    position: relative;
+}
+
+.card-front, .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+/* Lado frontal de la tarjeta */
+.card-front {
+    background: linear-gradient(145deg, #4e54c8, #8f94fb);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    transform: rotateY(0);
+    border: 1px solid #ccc;
+}
+
+/* Lado trasero de la tarjeta */
+.card-back {
+    background: linear-gradient(145deg, #ff9a9e, #fad0c4);
+    color: #333;
+    padding: 20px;
+    transform: rotateY(-180deg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border: 1px solid #ccc;
+}
+
+.card-back h3 {
+    margin-bottom: 20px;
+    color: #222;
+    font-size: 24px;
+}
+
+/* Animaciones mágicas */
+.card-back::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle, rgba(255,255,255,0.3), transparent);
+    border-radius: 15px;
+    z-index: -1;
+    animation: glow 1.5s infinite;
+}
+
+@keyframes glow {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
